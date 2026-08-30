@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { formatFCFA } from '@/lib/fees'
 import { formatDateTime } from '@/lib/utils'
 import CheckoutClient from '@/components/checkout/CheckoutClient'
@@ -17,9 +16,7 @@ export default async function CheckoutPage({
     redirect('/login')
   }
 
-  const admin = createAdminClient()
-
-  const { data: order } = await admin
+  const { data: order } = await supabase
     .from('orders')
     .select(`
       *,

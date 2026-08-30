@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Fetch event and ticket types
-  const { data: event } = await admin
+  // Fetch event and ticket types using authenticated client (RLS permits reads)
+  const { data: event } = await supabase
     .from('events')
     .select('id, title, slug, organization_id, status, max_tickets_per_order, is_free')
     .eq('id', eventId)
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Événement non trouvé' }, { status: 404 })
   }
 
-  const { data: ticketTypes } = await admin
+  const { data: ticketTypes } = await supabase
     .from('ticket_types')
     .select('*')
     .eq('event_id', eventId)
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Fetch buyer profile
-  const { data: profile } = await admin
+  const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, phone, email')
     .eq('id', user.id)

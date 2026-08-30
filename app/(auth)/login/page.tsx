@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
@@ -19,6 +20,7 @@ function LoginForm() {
   const redirectTo = searchParams.get('redirect') || '/'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -84,15 +86,25 @@ function LoginForm() {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Mot de passe
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="input-field mt-1"
-              required
-            />
+            <div className="relative mt-1">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="input-field !pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+              </button>
+            </div>
           </div>
 
           <button type="submit" disabled={loading || !email || !password} className="btn-primary w-full">
