@@ -75,9 +75,15 @@ export default function TicketSelector({ eventId, ticketTypes, maxPerOrder }: Ti
         return
       }
       if (data.redirectUrl) {
-        router.push(data.redirectUrl)
+        if (data.redirectUrl.startsWith('http')) {
+          window.location.href = data.redirectUrl
+        } else {
+          router.push(data.redirectUrl)
+        }
       }
-    } catch {
+    } catch (err) {
+      console.error('Checkout error:', err)
+      alert('Erreur réseau. Vérifie ta connexion et réessaie.')
       setLoading(false)
     }
   }
