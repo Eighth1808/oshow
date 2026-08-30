@@ -1,9 +1,13 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+function clean(s: string) {
+  return s.replace(/[^\x20-\x7E]/g, '').trim()
+}
+
 export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = clean(process.env.NEXT_PUBLIC_SUPABASE_URL || '')
+  const supabaseKey = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase environment variables')
   }
