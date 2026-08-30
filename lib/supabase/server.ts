@@ -20,7 +20,10 @@ export function createClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll()
+          return cookieStore.getAll().map(c => ({
+            ...c,
+            value: c.value.replace(/[^\x20-\x7E]/g, ''),
+          }))
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
           try {

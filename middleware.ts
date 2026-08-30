@@ -1,9 +1,13 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+function clean(s: string) {
+  return s.replace(/[^\x20-\x7E]/g, '').trim()
+}
+
 export async function middleware(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = clean(process.env.NEXT_PUBLIC_SUPABASE_URL || '')
+  const supabaseKey = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.next({ request })
   }
@@ -16,7 +20,10 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll().map(c => ({
+            ...c,
+            value: c.value.replace(/[^\x20-\x7E]/g, ''),
+          }))
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
