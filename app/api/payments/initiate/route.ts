@@ -82,12 +82,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Maximum ${event.max_tickets_per_order} billets par commande` }, { status: 400 })
   }
 
-  // Fetch buyer profile
-  const { data: profile } = await supabase
+  // Fetch buyer profile — create one if missing (FK constraint on orders.buyer_id)
+  let { data: profile } = await supabase
     .from('profiles')
     .select('full_name, phone, email')
     .eq('id', user.id)
     .single()
+
+  if (!profile) {
+    await admin.from('profiles').upsert({
+      id: user.id,
+      full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur',
+      email: user.email || '',
+      role: 'attendee',
+    })
+    profile = {
+      full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Utilisateur',
+      phone: null,
+      email: user.email || '',
+    }
+  }
 
   // Create order
   const orderNumber = generateOrderNumber()
@@ -116,7 +130,11 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (orderError || !order) {
-    return NextResponse.json({ error: 'Erreur création commande' }, { status: 500 })
+    console.error('Order creation failed:', orderError?.message, orderError?.details, orderError?.hint)
+    return NextResponse.json(
+      { error: `Erreur création commande: ${orderError?.message || 'unknown'}` },
+      { status: 500 }
+    )
   }
 
   const isMock = process.env.PAYMENT_MODE === 'mock'
