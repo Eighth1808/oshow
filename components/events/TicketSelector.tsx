@@ -64,11 +64,23 @@ export default function TicketSelector({ eventId, ticketTypes, maxPerOrder }: Ti
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId, items }),
       })
-      const data = await res.json()
+
       if (res.status === 401) {
         router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
         return
       }
+
+      let data
+      try {
+        data = await res.json()
+      } catch {
+        const text = await res.text().catch(() => '')
+        console.error('API returned non-JSON:', res.status, text.slice(0, 200))
+        alert(`Erreur serveur (${res.status}). Réessaie dans un instant.`)
+        setLoading(false)
+        return
+      }
+
       if (!res.ok) {
         alert(data.error || 'Erreur lors de la commande')
         setLoading(false)
@@ -83,7 +95,7 @@ export default function TicketSelector({ eventId, ticketTypes, maxPerOrder }: Ti
       }
     } catch (err) {
       console.error('Checkout error:', err)
-      alert('Erreur réseau. Vérifie ta connexion et réessaie.')
+      alert(`Erreur: ${err instanceof Error ? err.message : 'Vérifie ta connexion'}`)
       setLoading(false)
     }
   }

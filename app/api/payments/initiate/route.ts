@@ -6,6 +6,7 @@ import { buildQRPayload } from '@/lib/qr'
 import { createFedaPayClient, generatePaymentTransactionId } from '@/lib/fedapay'
 
 export async function POST(request: NextRequest) {
+  try {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -243,4 +244,10 @@ export async function POST(request: NextRequest) {
     mock: false,
     redirectUrl: token.url,
   })
+
+  } catch (err) {
+    console.error('Payment initiate crash:', err)
+    const message = err instanceof Error ? err.message : 'Erreur interne'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
 }
