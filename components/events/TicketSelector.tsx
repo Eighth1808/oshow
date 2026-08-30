@@ -17,6 +17,7 @@ export default function TicketSelector({ eventId, ticketTypes, maxPerOrder }: Ti
     Object.fromEntries(ticketTypes.map((t) => [t.id, 0]))
   )
   const [loading, setLoading] = useState(false)
+  const [phone, setPhone] = useState('')
 
   const totalQuantity = Object.values(quantities).reduce((sum, q) => sum + q, 0)
 
@@ -50,6 +51,12 @@ export default function TicketSelector({ eventId, ticketTypes, maxPerOrder }: Ti
   }
 
   async function handleCheckout() {
+    const rawPhone = phone.replace(/\s/g, '')
+    if (!rawPhone || rawPhone.length < 8) {
+      alert('Entre ton numéro de téléphone pour le paiement mobile.')
+      return
+    }
+
     setLoading(true)
     const items = ticketTypes
       .filter((tt) => (quantities[tt.id] || 0) > 0)
@@ -62,7 +69,7 @@ export default function TicketSelector({ eventId, ticketTypes, maxPerOrder }: Ti
       const res = await fetch('/api/payments/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, items }),
+        body: JSON.stringify({ eventId, items, buyerPhone: rawPhone }),
       })
 
       if (res.status === 401) {
@@ -169,12 +176,32 @@ export default function TicketSelector({ eventId, ticketTypes, maxPerOrder }: Ti
             <span>{formatFCFA(totalBreakdown.total)}</span>
           </div>
 
+          <div>
+            <label htmlFor="checkout-phone" className="block text-sm font-medium text-gray-700">
+              Numéro Flooz / T-Money
+            </label>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="flex h-11 items-center rounded-lg border border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">
+                +228
+              </span>
+              <input
+                id="checkout-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/[^\d\s]/g, ''))}
+                placeholder="90 12 34 56"
+                className="input-field !py-2.5"
+                required
+              />
+            </div>
+          </div>
+
           <button
             onClick={handleCheckout}
-            disabled={loading}
+            disabled={loading || !phone.replace(/\s/g, '')}
             className="btn-accent w-full !py-3.5"
           >
-            {loading ? 'Chargement...' : `Acheter — ${formatFCFA(totalBreakdown.total)}`}
+            {loading ? 'Chargement...' : `Payer — ${formatFCFA(totalBreakdown.total)}`}
           </button>
         </div>
       )}

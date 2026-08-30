@@ -15,9 +15,10 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { eventId, items } = body as {
+  const { eventId, items, buyerPhone } = body as {
     eventId: string
     items: Array<{ ticketTypeId: string; quantity: number }>
+    buyerPhone?: string
   }
 
   if (!eventId || !items?.length) {
@@ -220,6 +221,17 @@ export async function POST(request: NextRequest) {
   const nameParts = (profile?.full_name || 'Client').split(' ')
   const firstName = nameParts[0]
   const lastName = nameParts.slice(1).join(' ') || firstName
+  const customerPhone = buyerPhone || profile?.phone || ''
+
+  if (!customerPhone) {
+    return NextResponse.json({ error: 'Numéro de téléphone requis pour le paiement' }, { status: 400 })
+  }
+
+  const formattedPhone = customerPhone.startsWith('+') ? customerPhone : `+228${customerPhone}`
+
+  if (buyerPhone && !profile?.phone) {
+    await admin.from('profiles').update({ phone: formattedPhone }).eq('id', user.id)
+  }
 
   const { transaction, token } = await fedapay.createTransaction({
     amount: total,
@@ -227,7 +239,7 @@ export async function POST(request: NextRequest) {
     description: `${description} — ${event.title}`,
     customerFirstName: firstName,
     customerLastName: lastName,
-    customerPhone: profile?.phone || '',
+    customerPhone: formattedPhone,
     customerEmail: profile?.email || undefined,
     metadata: { orderId: order.id, eventId },
   })
