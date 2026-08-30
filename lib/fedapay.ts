@@ -130,8 +130,13 @@ const TOGO_MODES: Record<string, string> = {
 // CLIENT
 // ============================================
 
+function clean(s: string) {
+  return s.replace(/[^ -~]/g, '').trim();
+}
+
 export function createFedaPayClient(config: FedaPayConfig) {
   const baseUrl = FEDAPAY_BASE_URL[config.environment];
+  const secretKey = clean(config.secretKey);
 
   async function request<T>(
     method: string,
@@ -141,7 +146,7 @@ export function createFedaPayClient(config: FedaPayConfig) {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
-        'Authorization': `Bearer ${config.secretKey}`,
+        'Authorization': `Bearer ${secretKey}`,
         'Content-Type': 'application/json',
       },
       body: body ? JSON.stringify(body) : undefined,
