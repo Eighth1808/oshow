@@ -165,7 +165,7 @@ export function createFedaPayClient(config: FedaPayConfig) {
   // ----------------------------------------
 
   async function createTransaction(req: PaymentRequest): Promise<{ transaction: FedaPayTransaction; token: FedaPayTokenResult }> {
-    const txResponse = await request<{ v1: { transaction: FedaPayTransaction } }>('POST', '/transactions', {
+    const txResponse = await request<Record<string, unknown>>('POST', '/transactions', {
       description: req.description,
       amount: req.amount,
       currency: { iso: req.currency },
@@ -183,29 +183,61 @@ export function createFedaPayClient(config: FedaPayConfig) {
       metadata: req.metadata || {},
     });
 
-    const transaction = txResponse.v1.transaction;
+    const transaction = (
+      (txResponse as { v1?: { transaction?: FedaPayTransaction } }).v1?.transaction
+      || (txResponse as { 'v1/transaction'?: FedaPayTransaction })['v1/transaction']
+      || (txResponse as { transaction?: FedaPayTransaction }).transaction
+    ) as FedaPayTransaction;
 
-    const tokenResponse = await request<{ token: string; url: string }>('POST', `/transactions/${transaction.id}/token`, {});
+    if (!transaction?.id) {
+      throw new Error(`FedaPay: unexpected response structure: ${JSON.stringify(txResponse).slice(0, 300)}`);
+    }
 
-    return {
-      transaction,
-      token: tokenResponse,
-    };
+    const tokenResponse = await request<Record<string, unknown>>('POST', `/transactions/${transaction.id}/token`, {});
+
+    const token = (
+      (tokenResponse as { token?: string; url?: string }).url
+        ? tokenResponse as unknown as FedaPayTokenResult
+        : (tokenResponse as { v1?: { token?: FedaPayTokenResult } }).v1?.token
+          || (tokenResponse as { 'v1/token'?: FedaPayTokenResult })['v1/token']
+    ) as FedaPayTokenResult;
+
+    if (!token?.url) {
+      throw new Error(`FedaPay: unexpected token response: ${JSON.stringify(tokenResponse).slice(0, 300)}`);
+    }
+
+    return { transaction, token };
   }
 
   async function getTransaction(transactionId: number): Promise<TransactionStatus> {
-    const response = await request<{ v1: { transaction: TransactionStatus } }>('GET', `/transactions/${transactionId}`);
-    return response.v1.transaction;
+    const response = await request<Record<string, unknown>>('GET', `/transactions/${transactionId}`);
+    const tx = (
+      (response as { v1?: { transaction?: TransactionStatus } }).v1?.transaction
+      || (response as { 'v1/transaction'?: TransactionStatus })['v1/transaction']
+      || (response as { transaction?: TransactionStatus }).transaction
+    ) as TransactionStatus;
+    if (!tx) throw new Error(`FedaPay: could not parse transaction response`);
+    return tx;
   }
 
   // ----------------------------------------
   // PAYOUTS: Pay organizers after events
   // ----------------------------------------
 
+  function extractPayout(response: Record<string, unknown>): FedaPayPayout {
+    const payout = (
+      (response as { v1?: { payout?: FedaPayPayout } }).v1?.payout
+      || (response as { 'v1/payout'?: FedaPayPayout })['v1/payout']
+      || (response as { payout?: FedaPayPayout }).payout
+    ) as FedaPayPayout;
+    if (!payout) throw new Error(`FedaPay: could not parse payout response`);
+    return payout;
+  }
+
   async function createPayout(req: PayoutRequest): Promise<FedaPayPayout> {
     const mode = TOGO_MODES[req.mode] || req.mode;
 
-    const response = await request<{ v1: { payout: FedaPayPayout } }>('POST', '/payouts', {
+    const response = await request<Record<string, unknown>>('POST', '/payouts', {
       amount: req.amount,
       currency: { iso: req.currency },
       mode,
@@ -219,17 +251,17 @@ export function createFedaPayClient(config: FedaPayConfig) {
       },
     });
 
-    return response.v1.payout;
+    return extractPayout(response);
   }
 
   async function startPayout(payoutId: number): Promise<FedaPayPayout> {
-    const response = await request<{ v1: { payout: FedaPayPayout } }>('PUT', `/payouts/${payoutId}/start`, {});
-    return response.v1.payout;
+    const response = await request<Record<string, unknown>>('PUT', `/payouts/${payoutId}/start`, {});
+    return extractPayout(response);
   }
 
   async function getPayoutStatus(payoutId: number): Promise<FedaPayPayout> {
-    const response = await request<{ v1: { payout: FedaPayPayout } }>('GET', `/payouts/${payoutId}`);
-    return response.v1.payout;
+    const response = await request<Record<string, unknown>>('GET', `/payouts/${payoutId}`);
+    return extractPayout(response);
   }
 
   // ----------------------------------------
